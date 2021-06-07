@@ -1,0 +1,1 @@
+Run get_brand_list.py then get_products_list.py then sephora.py
