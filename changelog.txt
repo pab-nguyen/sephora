@@ -2,15 +2,16 @@ get_brands_lists.py:
 - line 18:
     change brands = driver.find_elements_by_xpath('//div//ul/li/a')
         to brands = driver.find_elements_by_xpath('//a[@data-at="brand_link"]')
-    reason: the elements of the website has changed since the author created this scraper. It grabbed the products link instead of brand link.
-
-
-
-
-
+    problem: the elements of the website has changed since the author created this scraper. It grabbed the products link instead of brand link.
+    solution: grab any elements with brand_link in their data-at attribute
 
 get_products_list.py:
-- replace Mozilla/5.0 (Macintosh; Intel Mac OS X \ 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 \ Safari/537.36
-     with Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36
+- line 58:
+    replace Mozilla/5.0 (Macintosh; Intel Mac OS X \ 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 \ Safari/537.36
+       with Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36
   find your user agent at https://www.whatsmyua.info/
--
+- line 69:
+    change @id to @data-at
+    reason: website changed their element attribute
+- line 142: add driver.implicitly_wait(10). Force webdriver to wait 10 secs to find the element
+    reason: driver couldn't find element because it wasn't visible

@@ -1,6 +1,8 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import time
 import os
 import csv
@@ -55,9 +57,7 @@ import math
 ## setting up the webdriver with a user-agent and with options to
 ## disable notifications - though it seems not to work well
 opts = Options()
-opts.add_argument("user-agent=['Mozilla/5.0 (Macintosh; Intel Mac OS X "
-                  "10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 "
-                  "Safari/537.36']")
+opts.add_argument("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36")
 opts.add_argument("--disable-notifications")
 driver = webdriver.Chrome(options=opts)
 
@@ -67,9 +67,9 @@ brands = open('sephora_brand_pages.txt', 'r').readlines()
 ## These are commonly used xpaths. The product_path is the path to the product
 ## urls the continue_shopping_xpath is the xpath to the "continue shopping"
 ## button on the pop-up modal dialogs that come up
+
 product_xpath = '//div[@class="css-12egk0t"]/a[@class="css-ix8km1"]'
-continue_shopping_xpath = "//div[@id='modalDialog']//button[@aria-label=" + \
-                          "'Continue shopping']"
+continue_shopping_xpath = "//button[@aria-label='Continue shopping'][@data-at='ql_close']"
 
 
 ## the driver.execute_script() method executes javascript code
@@ -87,6 +87,7 @@ def window_scroll(x):
 ############################################################################
 ## This is a function for scraping brand pages for product urls
 def scrape_brandpage_v1(url, num_products):
+    driver.implicitly_wait(10)
     if url:
         driver.implicitly_wait(10)
         driver.get(url)
@@ -110,14 +111,17 @@ def scrape_brandpage_v1(url, num_products):
             if nproducts_initial == nproducts_final:
                 try:
                     driver.find_elements_by_xpath(product_xpath)[-1].click()
-                    time.sleep(5)
                     driver.find_elements_by_xpath(product_xpath)[-1]. \
                         send_keys(Keys.PAGE_DOWN)
                 except:
                     time.sleep(10)
+
+
                     ex_out = driver. \
                         find_element_by_xpath(continue_shopping_xpath)
-                    time.sleep(5)
+                    wait = WebDriverWait(driver, 10)
+                    element = wait.until(EC.element_to_be_clickable(ex_out))
+
                     ex_out.click()
                     time.sleep(5)
                     driver.find_elements_by_xpath(product_xpath)[-1].click()
@@ -142,6 +146,7 @@ def scrape_brandpage_v1(url, num_products):
 
 
 def scrape_brandpage_v2():
+    driver.implicitly_wait(10)
     nproducts_initial = len(driver.find_elements_by_xpath(product_xpath))
     driver.execute_script("arguments[0].scrollIntoView()", driver. \
                           find_elements_by_xpath(product_xpath)[-1])
@@ -228,8 +233,10 @@ def change_page():
 
 def num_pages_2(brand, num_tot_products, method):
     brand_urls = scrape_brandpage_v1(brand, 60)
+    print(brand_urls)
     change_page()
     if method == 1:
+        print(brand_urls)
         brand_urls.extend(scrape_brandpage_v1([], num_tot_products - 60))
     if method == 2:
         brand_urls.extend(scrape_brandpage_v2())
@@ -257,6 +264,7 @@ try:
         try:
             num_tot_products = int(driver.find_element_by_xpath('//span' + \
                                                                 '[@data-at="number_of_products"]').text.split()[0])
+            print(num_tot_products)
         except:
             num_tot_products = 0
             continue
