@@ -15,3 +15,9 @@ get_products_list.py:
     reason: website changed their element attribute
 - line 142: add driver.implicitly_wait(10). Force webdriver to wait 10 secs to find the element
     reason: driver couldn't find element because it wasn't visible
+- line 122: add
+    wait = WebDriverWait(driver, 10)
+    element = wait.until(EC.element_to_be_clickable(ex_out))
+- line 157: add
+    wait = WebDriverWait(driver, 10)
+    element = wait.until(EC.element_to_be_clickable(ex_out))
