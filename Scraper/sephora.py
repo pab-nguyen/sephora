@@ -4,6 +4,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
+from fake_useragent import UserAgent
+
 import time
 import random
 import re
@@ -50,11 +52,22 @@ import math
 ## which are the result of get_product_urls.py and the Scrapy spider
 ## and get_chemical_urls.py
 
+ua = UserAgent()
+userAgent = ua.random
+
 opts = Options()
-opts.add_argument("user-agent=['Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36']")
+user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
 opts.add_argument("--disable-notifications")
+opts.add_argument(f'user-agent={userAgent}')
+# opts.add_argument("--headless")
+#opts.add_argument('--disable-gpu')
+#opts.add_argument('--no-sandbox')
+#opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+#opts.add_experimental_option('useAutomationExtension', False)
 
 driver = webdriver.Chrome(options=opts)
+
+driver.delete_all_cookies()
 
 product_urls = open('sephora_product_urls.txt', 'r').readlines()
 # product_urls = open('../sephora_chemical_urls.txt', 'r').readlines()
@@ -71,9 +84,7 @@ product_urls = open('sephora_product_urls.txt', 'r').readlines()
 ## "index.txt", and upon rerunning the script, the products.csv file will be
 ## openned and appended to, starting from the index in index.txt.
 
-columns = ['name', 'brand', 'family', 'genus', 'species', 'price',
-           'ave_rating', 'volume', 'num_loves', 'num_reviews', 'weight', 'details',
-           'ingredients']
+columns = ['name', 'brand', 'family', 'genus', 'species', 'price','ave_rating', 'volume', 'num_loves', 'num_reviews', 'weight', 'details','ingredients','url']
 ## for writing the first row of the csv using DictWriter
 column_dict = dict(zip(columns, columns))
 
@@ -100,9 +111,7 @@ unwanted_products = ['Mini Size', 'Value & Gift Sets', 'Facial Rollers',
                      'Tweezers & Eyebrow Tools', 'Blotting Papers', 'Hair Tools']
 
 ## The xpath for the "continue shopping" button on the pop-up modal dialog
-continue_shopping_xpath = '//div[@id="modalDialog"]//button[@aria-label=' + \
-                          '"Continue shopping"]'
-
+continue_shopping_xpath = '//button[@aria-label="Continue shopping"]'
 try:
     for i, url in enumerate(product_urls):
         # keep track of how many pages have been scraped
@@ -110,59 +119,56 @@ try:
         product_dict = {}
         driver.implicitly_wait(10)
         driver.get(url)
-        time.sleep(5)
         if i == 0:
-            button = driver.find_element_by_xpath(continue_shopping_xpath)
-            button.click()
-            time.sleep(4)
+            try:
+                button = driver.find_element_by_xpath(continue_shopping_xpath)
+                button.click()
+            except:
+                time.sleep(1)
         # product_type is the text containing family/genus/species
         product_type = driver.find_elements_by_xpath('//nav[@aria-label="Br' + \
                                                      'eadcrumbs"]//a')
         # if len(product_type) <  3, it is gift card or gift set of some sort
+        print("1")
+        driver.save_screenshot("screenshot.png")
+
         if len(product_type) < 3: continue
+
+        print("2")
         # separate the family, genus and species
         product_type = [val.text for val in product_type]
         # remove products that are in the unwanted_products categories
         if (product_type[1] in unwanted_products) or \
                 (product_type[2] in unwanted_products):
             continue
-
+        print("3")
         # get the product name and brand, which is usually up high on the
         # page, but sometimes is more in the center of the page
-        product = driver.find_elements_by_xpath('//h1[@data-comp="DisplayNa' + \
-                                                'me Box "]//span')
+        product = driver.find_elements_by_xpath('//span[@data-at="product_name"]')
+        brand = driver.find_elements_by_xpath('//a[@data-at="brand_name"]')
         if len(product) == 0:
             product = driver.find_elements_by_xpath('//h1[@data-comp="Displ' + \
                                                     'ayName Flex Box"]//span')
 
         ## add the various values to the product dictionary
+        product_dict['url'] = driver.current_url
         product_dict['family'] = product_type[0]
         product_dict['genus'] = product_type[1]
         product_dict['species'] = product_type[2]
-        product_dict['name'] = product[1].text
-        product_dict['brand'] = product[0].text
-
+        product_dict['name'] = product[0].text
+        product_dict['brand'] = brand[0].text
         ## Likewise, the price can be found in two different locations
-        try:
-            product_dict['price'] = driver.find_element_by_xpath('//div[@dat' + \
-                                                                 'a-comp="Price Box "]').text
-        except:
-            product_dict['price'] = driver.find_element_by_xpath('//div[@dat' + \
-                                                                 'a-comp="Price Box "]/span[1]').text
+        product_dict['price'] = driver.find_element_by_xpath('//p[@data-comp="Price "]/span/span[1]/b').text
 
         ## The size of the product and item number are often listed together
         ## as "XX.XX( fl) oz/XX mL ITEM # XXXXXXXXXX"
         ## sometimes, that xpath only contains the element number, in which
         ##	case the weight & volume are in a different location. Sometimes no
         ## weight/volume are listed
-        size = driver.find_element_by_xpath('//div[@data-comp="SizeAndItemNu' + \
-                                            'mber Box "]').text
-        if re.findall('^ITEM', size):
-            try:
-                size = driver.find_element_by_xpath('//span[@data-comp="Pro' + \
-                                                    'ductVariation Text Box "]').text
-            except:
-                size = ''
+        try:
+            size = driver.find_element_by_xpath('//div[@data-comp="SwatchDescription "]').text
+        except:
+            size=''
 
         ## once the size variable is found, separate the weight (in oz) from
         ## the volume (in mL)
@@ -174,53 +180,32 @@ try:
         volume = re.findall("(\d+) ?mL", size)
         if volume:
             product_dict['volume'] = volume[0]
-
         ## get the number of "loves" from the top of the page
-        product_dict['num_loves'] = driver.find_element_by_xpath('//span[@d' + \
-                                                                 'ata-at="product_love_count"]').text
+        product_dict['num_loves'] = driver.find_element_by_xpath('//div[@data-comp="LovesCount "]/span').text
         ## the number of reviews is only listed if there are reviews
         try:
-            product_dict['num_reviews'] = driver.find_element_by_xpath('//s' + \
-                                                                       'pan[@data-at="number_of_reviews"]').text.split()[
-                0]
+            product_dict['num_reviews'] = driver.find_element_by_xpath('//span[@data-at="number_of_reviews"]').text.split()[0]
         except:
             product_dict['num_reviews'] = '0'
         # if there are reviews, then get the average review
         if product_dict['num_reviews'] != '0':
-            product_dict['ave_rating'] = driver.find_element_by_xpath('//di' + \
-                                                                      'v[@data-comp="StarRating "]').get_attribute(
-                'aria-label'). \
-                split()[0]
-
+            product_dict['ave_rating'] = driver.find_element_by_xpath('//div[@data-comp="StarRating "]').get_attribute('aria-label').split()[0]
         time.sleep(2)
 
-        ## scrolling down to the product tabs sections
-        product_tabs_section = driver.find_elements_by_xpath('//div[@data-a' + \
-                                                             't="product_tabs_section"]')
-        ## tabs refers to the clickable "tab" buttons
-        tabs = driver.find_elements_by_xpath('//div[@data-at="product_ta' + \
-                                             'bs_section"]/div[@aria-label="Product Information"]/button')
-        driver.execute_script("window.scrollBy(0, 570)", product_tabs_section)
-        time.sleep(5)
-        ## set up vars for iteration
-        j = 0
-        Details, Ingredients = '', ''
-        ## the last tab is always the Shipping & Handling, clicking it results
-        ## in a redirection
-        for tab in tabs[:-1]:
-            if j != 0:
-                tab.click()
-                time.sleep(2)
-            label = tab.find_element_by_xpath('./span').text
-            if label in ["Details", "Ingredients"]:
-                text = [driver.find_element_by_xpath('//div[@id="tabpanel' + \
-                                                     '%d"]/div' % j).text]
-                exec(f'{label} = {text}')
-            if (Details != '') and (Ingredients != ''):
-                break
-            j += 1
-        product_dict['details'] = Details
-        product_dict['ingredients'] = Ingredients
+        ## get ingredients and details
+        try:
+            driver.find_element_by_xpath('//button[@data-at="ingredients"]').click()
+            product_dict['ingredients'] = driver.find_element_by_xpath('//div[@id="ingredients"]/div/div').get_attribute("innerHTML")
+        except:
+            pass
+
+        try:
+            driver.find_element_by_xpath('//button[@class="css-5fs8cb eanm77i0"]').click()
+            product_dict['details'] = driver.find_element_by_xpath('//div[@class="css-u2scbn eanm77i0"]/div').get_attribute("innerHTML")
+        except:
+            pass
+
+
         ## The number of reviews written at the top of the page tends to be
         ## rounded, as described above. The average rating at the top of the
         ## page also tends to be rounded to the nearest 0.5. However, the
@@ -234,34 +219,24 @@ try:
         ## page with the actual values from the bottom of the page.
         ## This part of the script could maybe be written better, but in the
         ## interest of time and efficiency, I chose to move on.
+        driver.execute_script("arguments[0].scrollIntoView();", driver.find_element_by_xpath('//div[@id="ratings-reviews-container"]'))
+
         if product_dict['num_reviews'] != '0':
             try:
-                ave_rating = driver.find_element_by_xpath('//*[@id="ratings' + \
-                                                          '-reviews"]//div[@class="css-1r36mik "]').text
-                ave_rating = float(ave_rating.split('/')[0])
+                ave_rating = driver.find_element_by_xpath('//span[@class="css-1ac1x0l eanm77i0"]').get_attribute("innerHTML")
                 product_dict['ave_rating'] = ave_rating
+
             except:
-                try:
-                    review_section = driver.find_element_by_xpath('//*[@id=' + \
-                                                                  '"ratings-reviews"]')
-                    driver.execute_script("window.scrollBy(0, 200)", \
-                                          review_section)
-                    time.sleep(4)
-                    ave_rating = driver.find_element_by_xpath('//*[@id="rat' + \
-                                                              'ings-reviews"]//div[@class="css-1r36mik "]').text
-                    ave_rating = float(ave_rating.split('/')[0])
-                    product_dict['ave_rating'] = ave_rating
-                except:
-                    pass
+                pass
             try:
-                num_reviews = driver.find_element_by_xpath('//div[@data-com' + \
-                                                           'p="ReviewsStats Box "]//span').text.split()[0]
+                num_reviews = driver.find_element_by_xpath('//div[contains(@data-comp,"ReviewsStats")]//span[@class="css-nv7myq eanm77i0"]').text.split()[0]
                 product_dict['num_reviews'] = num_reviews
             except:
                 pass
         ## write everything into the csv
         writer.writerow(product_dict)
-        time.sleep(4)
+        time.sleep(2)
+        print("end")
 except Exception as e:
     ## if there is an error with the page, print the url and error message so
     ## the page can be manually inspected
@@ -270,9 +245,9 @@ except Exception as e:
     ## write the index so the script knows where where it left off
     open('index.txt', 'w').write('%d' % (i + index))
     csv_file.close()
-    # driver.close()
-    time.sleep(2)
+    driver.quit()
+    time.sleep(5)
     quit()
 
-# driver.close()
+driver.quit()
 quit()

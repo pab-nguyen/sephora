@@ -106,7 +106,7 @@ def scrape_brandpage_v1(url, num_products):
     if (num_products > 36):
         nproducts_initial = len(driver.find_elements_by_xpath(product_xpath))
         if nproducts_initial <= 36:
-            driver.execute_script("arguments[0].scrollIntoView()", \
+            driver.execute_script("arguments[0].scrollIntoView()",
                                   driver.find_elements_by_xpath(product_xpath)[-1])
             time.sleep(10)
             nproducts_final = len(driver.find_elements_by_xpath(product_xpath))
@@ -124,7 +124,7 @@ def scrape_brandpage_v1(url, num_products):
                     # driver.find_elements_by_xpath(product_xpath)[-1]. \
                     #     send_keys(Keys.PAGE_DOWN)
         time.sleep(5)
-        driver.execute_script("arguments[0].scrollIntoView()", \
+        driver.execute_script("arguments[0].scrollIntoView()",
                               driver.find_elements_by_xpath(product_xpath)[-1])
         time.sleep(10)
         driver.execute_script("arguments[0].scrollIntoView()", \
@@ -146,31 +146,31 @@ def scrape_brandpage_v2():
     driver.execute_script("arguments[0].scrollIntoView()", driver.find_elements_by_xpath(product_xpath)[-1])
     time.sleep(10)
     nproducts_final = len(driver.find_elements_by_xpath(product_xpath))
-
     if nproducts_initial == nproducts_final:
-        print("there")
         time.sleep(5)
-        ex_out = driver.find_element_by_xpath(continue_shopping_xpath)
-        print("here2")
-        wait = WebDriverWait(driver, 10)
-        print("we")
-        element = wait.until(EC.element_to_be_clickable((By.XPATH, continue_shopping_xpath)))
-        print("go")
-        ex_out.click()
-        time.sleep(3)
-        driver.execute_script(window_scroll(0.8))
-        time.sleep(15)
+        try:
+            ex_out = driver.find_element_by_xpath(continue_shopping_xpath)
+            wait = WebDriverWait(driver, 10)
+            element = wait.until(EC.element_to_be_clickable((By.XPATH, continue_shopping_xpath)))
+            ex_out.click()
+        except:
+            time.sleep(3)
+            driver.execute_script(window_scroll(0.8))
+            time.sleep(15)
         nproducts = len(driver.find_elements_by_xpath(product_xpath))
         if nproducts == nproducts_final:
             driver.find_elements_by_xpath(product_xpath)[5]. \
                 send_keys(Keys.PAGE_DOWN)
             time.sleep(15)
             nproducts = len(driver.find_elements_by_xpath(product_xpath))
-            driver.find_elements_by_xpath(product_xpath)[-1].click()
             time.sleep(5)
-            ex_out = driver.find_element_by_xpath(continue_shopping_xpath)
-            ex_out.click()
-            time.sleep(0.5)
+            try:
+                ex_out = driver.find_element_by_xpath(continue_shopping_xpath)
+                wait = WebDriverWait(driver, 10)
+                element = wait.until(EC.element_to_be_clickable((By.XPATH, continue_shopping_xpath)))
+                ex_out.click()
+            except:
+                time.sleep(0.5)
     driver.execute_script(window_scroll(0.2))
     time.sleep(2)
     driver.execute_script(window_scroll(0.5))
@@ -180,7 +180,6 @@ def scrape_brandpage_v2():
     driver.execute_script(window_scroll(0.615))
     time.sleep(15)
     products = driver.find_elements_by_xpath(product_xpath)
-    print("end?")
     product_urls = [product.get_attribute('href') for product in products]
     return product_urls
 
@@ -192,13 +191,15 @@ def scrape_brandpage_v3():
     time.sleep(10)
     nproducts_final = len(driver.find_elements_by_xpath(product_xpath))
     if nproducts_initial == nproducts_final:
-        driver.find_elements_by_xpath(product_xpath)[11].click()
-        time.sleep(5)
-        ex_out = driver.find_element_by_xpath(continue_shopping_xpath)
-        ex_out.click()
-        time.sleep(3)
-        driver.execute_script(window_scroll(0.8))
-        time.sleep(15)
+        try:
+            ex_out = driver.find_element_by_xpath(continue_shopping_xpath)
+            wait = WebDriverWait(driver, 10)
+            element = wait.until(EC.element_to_be_clickable((By.XPATH, continue_shopping_xpath)))
+            ex_out.click()
+        except:
+            time.sleep(3)
+            driver.execute_script(window_scroll(0.8))
+            time.sleep(15)
         nproducts = len(driver.find_elements_by_xpath(product_xpath))
     time.sleep(10)
     driver.execute_script(window_scroll(0.2))
