@@ -1,5 +1,5 @@
 # YouthRx  
-*** Last updated at 07/02/2021***  
+***Last updated at 07/02/2021***   
 Scrape and clean Sepohora products and ingredients data - by Mai Doan and Phan Nguyen  
 
 This is a project where we tried to collect all Sephora products and their ingredients data.  
